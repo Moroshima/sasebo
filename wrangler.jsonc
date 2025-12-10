@@ -27,6 +27,10 @@
 			"bucket_name": "ebooks"
 		},
 		{
+			"binding": "PICTURES_BUCKET",
+			"bucket_name": "pictures"
+		},
+		{
 			"binding": "RIPS_BUCKET",
 			"bucket_name": "rips"
 		}
@@ -38,7 +42,8 @@
 	"vars": {
 		"BUCKET_SUFFIX": "_BUCKET",
 		"OWNER": "Moroshima",
-		"FAVICON": "https://yunagi.dev/favicon.ico"
+		"FAVICON": "https://yunagi.dev/favicon.ico",
+		"CHUNK_SIZE": 1048576 // 1*1024*1024 1MiB
 	}
 	/**
 	 * Note: Use secrets to store sensitive data.

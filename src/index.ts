@@ -11,6 +11,8 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+import parseRange from 'range-parser';
+
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		if (request.method !== 'GET') {
@@ -22,7 +24,7 @@ export default {
 			});
 		}
 
-		const { BUCKET_SUFFIX: bucketSuffix, OWNER: owner, FAVICON: favicon } = env;
+		const { BUCKET_SUFFIX: bucketSuffix, OWNER: owner, FAVICON: favicon, CHUNK_SIZE: chunkSize } = env;
 
 		// Automatically detect r2 buckets by suffix
 		const buckets = Object.entries(env)
@@ -92,21 +94,66 @@ export default {
 
 		// When the path resolves to a direct R2 object (no prefixes/objects), return the file with metadata and range support
 		if (delimitedPrefixes.length === 0 && objects.length === 0 && path.length !== 0 && !debug) {
-			const object = await bucket.binding.get(key, {
-				onlyIf: request.headers,
-				range: request.headers,
-			});
+			const metadata = await bucket.binding.head(key);
+			if (metadata === null) return new Response('Object Not Found', { status: 404 });
 
-			if (object === null) return new Response('Object Not Found', { status: 404 });
+			const range = request.headers.has('Range') ? parseRange(metadata.size, request.headers.get('Range') as string) : undefined;
 
 			const headers = new Headers();
+
+			let offset = 0,
+				length;
+
+			if (range === -1) {
+				return new Response('Malformed Header String', { status: 400 });
+			} else if (range === -2) {
+				return new Response('Range Not Satisfiable', { status: 416 });
+			} else if (range !== undefined) {
+				if (range.type === 'bytes') {
+					const start = range[0].start;
+					let end = range[0].end;
+					if (end - start > chunkSize - 1) {
+						end = start + chunkSize - 1;
+					}
+					offset = start;
+					length = end - start + 1; // end minus start can't be negative here
+					headers.set('Content-Range', ['bytes'].concat(`${start}-${end}/${metadata.size}`).join(' '));
+				}
+			} // else if range is undefined, do nothing
+
+			// Has range request, but zero bytes to return is invalid
+			if (range !== undefined && length === undefined) return new Response('Range Not Satisfiable', { status: 416 });
+
+			if (request.headers.get('If-None-Match') === metadata.httpEtag) {
+				return new Response(undefined, {
+					status: 304,
+					headers: {
+						ETag: metadata.httpEtag,
+					},
+				});
+			}
+
+			const object = await bucket.binding.get(key, {
+				onlyIf: request.headers,
+				range: range ? { offset: offset, length: length } : undefined,
+			});
+			if (object === null) return new Response('Failed to Get Object', { status: 500 });
+
+			// https://developers.cloudflare.com/r2/api/workers/workers-api-reference/#http-metadata
 			object.writeHttpMetadata(headers);
+
 			headers.set('ETag', object.httpEtag);
 			headers.set('Accept-Ranges', 'bytes'); // unnecessary, but can tell the client that we accept range requests
 
-			// When no body is present, preconditions have failed
+			let status = 200;
+			if (!('body' in object)) {
+				status = 412; // When no body is present, preconditions have failed
+			} else if (range !== undefined) {
+				status = 206;
+			}
+
 			return new Response('body' in object ? object.body : undefined, {
-				status: 'body' in object ? 200 : 412,
+				status,
 				headers,
 			});
 		}

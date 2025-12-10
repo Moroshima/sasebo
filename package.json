@@ -8,8 +8,12 @@
 		"dev": "wrangler dev",
 		"cf-typegen": "wrangler types"
 	},
+	"dependencies": {
+		"range-parser": "^1.2.1"
+	},
 	"devDependencies": {
-		"typescript": "^5.5.2",
-		"wrangler": "^4.49.0"
+		"@types/range-parser": "^1.2.7",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.53.0"
 	}
 }
