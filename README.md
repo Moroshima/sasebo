@@ -1,6 +1,6 @@
 # Sasebo
 
-Easily browse your R2 buckets via a simple web interface.
+**Sasebo** is a lightweight Cloudflare Worker that provides a simple web interface for browsing and downloading objects in your R2 buckets.
 
 ## Quick Start
 
@@ -10,8 +10,8 @@ Easily browse your R2 buckets via a simple web interface.
 
 ## Supported Features
 
-- _Range header (206 Partial Content)_ for multi-part downloads.
-- _If-None-Match header (304 Not Modified)_ for caching.
+- _Range header (206 Partial Content)_ for range-based downloads (multipart/byteranges is not supported).
+- _If-None-Match header (304 Not Modified)_ for ETag-based caching.
 
 ## LICENSE
 
