@@ -59,6 +59,14 @@ export default {
 		const url = new URL(request.url);
 		const pathname = url.pathname.slice(1).split('/').filter(Boolean);
 
+		if (pathname[0] === 'robots.txt') {
+			return new Response('User-agent: *\nDisallow: /', {
+				headers: {
+					'Content-Type': 'text/plain; charset=utf-8',
+				},
+			});
+		}
+
 		if (pathname.length === 0) {
 			return html(
 				'<h1>R2 Buckets</h1>' +
@@ -69,7 +77,8 @@ export default {
 							return `<li><a href="${name.concat('/')}">${name}</a></li>`;
 						})
 						.join('') +
-					'</ul>',
+					'</ul>' +
+					'<p>Powered by <a href="https://github.com/Moroshima/sasebo" target="_blank">Sasebo</a></p>',
 				`${owner}'s R2 Index`
 			);
 		}
@@ -124,13 +133,20 @@ export default {
 			// Has range request, but zero bytes to return is invalid
 			if (range !== undefined && length === undefined) return new Response('Range Not Satisfiable', { status: 416 });
 
-			if (request.headers.get('If-None-Match') === metadata.httpEtag) {
-				return new Response(undefined, {
-					status: 304,
-					headers: {
-						ETag: metadata.httpEtag,
-					},
+			const ifNoneMatch = request.headers.get('If-None-Match');
+			if (ifNoneMatch !== null) {
+				const list = ifNoneMatch.split(',').map((value) => {
+					return value.trim().startsWith('W/') ? value.trim().slice(2) : value.trim();
 				});
+
+				if (list.includes(metadata.httpEtag)) {
+					return new Response(undefined, {
+						status: 304,
+						headers: {
+							ETag: metadata.httpEtag,
+						},
+					});
+				}
 			}
 
 			const object = await bucket.binding.get(key, {
