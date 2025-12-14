@@ -24,7 +24,33 @@ export default {
 			});
 		}
 
-		const { BUCKET_SUFFIX: bucketSuffix, OWNER: owner, FAVICON: favicon, CHUNK_SIZE: chunkSize } = env;
+		const url = new URL(request.url);
+		const pathname = url.pathname.slice(1).split('/').filter(Boolean);
+
+		if (pathname[0] === 'robots.txt') {
+			return new Response('User-agent: *\nDisallow: /\n', {
+				headers: {
+					'Content-Type': 'text/plain; charset=utf-8',
+				},
+			});
+		}
+
+		const {
+			BUCKET_SUFFIX: bucketSuffix,
+			OWNER: owner,
+			FAVICON: favicon,
+			CHUNK_SIZE: chunkSize,
+			SECURITY_CONTACT: securityContact,
+			SECURITY_EXPIRES: securityExpires,
+		} = env;
+
+		if (pathname[0] === '.well-known' && pathname[1] === 'security.txt') {
+			return new Response(`Contact: ${securityContact}\nExpires: ${securityExpires}\n`, {
+				headers: {
+					'Content-Type': 'text/plain; charset=utf-8',
+				},
+			});
+		}
 
 		// Automatically detect r2 buckets by suffix
 		const buckets = Object.entries(env)
@@ -46,6 +72,7 @@ export default {
 					'</head>' +
 					'<body>' +
 					body +
+					'<p>Powered by <a href="https://github.com/Moroshima/sasebo" target="_blank">Sasebo</a></p>' +
 					'</body>' +
 					'</html>',
 				{
@@ -54,17 +81,6 @@ export default {
 					},
 				}
 			);
-		}
-
-		const url = new URL(request.url);
-		const pathname = url.pathname.slice(1).split('/').filter(Boolean);
-
-		if (pathname[0] === 'robots.txt') {
-			return new Response('User-agent: *\nDisallow: /', {
-				headers: {
-					'Content-Type': 'text/plain; charset=utf-8',
-				},
-			});
 		}
 
 		if (pathname.length === 0) {
@@ -77,8 +93,7 @@ export default {
 							return `<li><a href="${name.concat('/')}">${name}</a></li>`;
 						})
 						.join('') +
-					'</ul>' +
-					'<p>Powered by <a href="https://github.com/Moroshima/sasebo" target="_blank">Sasebo</a></p>',
+					'</ul>',
 				`${owner}'s R2 Index`
 			);
 		}

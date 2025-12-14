@@ -43,7 +43,9 @@
 		"BUCKET_SUFFIX": "_BUCKET",
 		"OWNER": "Moroshima",
 		"FAVICON": "https://yunagi.dev/favicon.ico",
-		"CHUNK_SIZE": 1048576 // 1*1024*1024 1MiB
+		"CHUNK_SIZE": 1048576, // 1*1024*1024 1MiB
+		"SECURITY_CONTACT": "mailto:admin@yunagi.dev",
+		"SECURITY_EXPIRES": "2038-01-19T03:14:07Z"
 	}
 	/**
 	 * Note: Use secrets to store sensitive data.
